@@ -11,11 +11,11 @@ fi
 cd results
 fn=`date +"%Y-%m-%d_%I-%M-%S"`
 mkdir $1_$fn
-
+echo $1_$fn
 cd $1_$fn
 cp ../../models/$1/* ./
 mkdir snapshots
 mkdir weights
 $caffe_dir/python/draw_net.py train_test.prototxt net.png
-nohup $caffe_dir/build/tools/caffe train \
+$caffe_dir/build/tools/caffe train \
     -solver=../../models/$1/solver.prototxt &

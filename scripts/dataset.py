@@ -76,6 +76,69 @@ def create_dataset():
     img_env.close()
     jnt_env.close()
 
+def create_test_dataset():
+    if not os.path.exists('data/with_test'):
+        os.makedirs('data/with_test')
+    img_db_fn = 'data/with_test/image_train.lmdb'
+    del_and_create(img_db_fn)
+    img_env = lmdb.Environment(img_db_fn, map_size=1099511627776)
+    img_txn = img_env.begin(write=True, buffers=True)
+
+    jnt_db_fn = 'data/with_test/joint_train.lmdb'
+    del_and_create(jnt_db_fn)
+    jnt_env = lmdb.Environment(jnt_db_fn, map_size=1099511627776)
+    jnt_txn = jnt_env.begin(write=True, buffers=True)
+
+    img_val_db_fn = 'data/with_test/image_val.lmdb'
+    del_and_create(img_val_db_fn)
+    img_val_env = lmdb.Environment(img_val_db_fn, map_size=1099511627776)
+    img_val_txn = img_val_env.begin(write=True, buffers=True)
+
+    jnt_val_db_fn = 'data/with_test/joint_val.lmdb'
+    del_and_create(jnt_val_db_fn)
+    jnt_val_env = lmdb.Environment(jnt_val_db_fn, map_size=1099511627776)
+    jnt_val_txn = jnt_val_env.begin(write=True, buffers=True)
+
+
+    keys = np.arange(100000)
+    np.random.shuffle(keys)
+
+    img_fns = glob.glob('data/FLIC-full/crop/*.jpg')
+    img_fns += glob.glob('data/lspet_dataset/crop/*.jpg')
+    jnt_fns = glob.glob('data/FLIC-full/joint/*.npy')
+    jnt_fns += glob.glob('data/lspet_dataset/joint/*.npy')
+    for i, (img_fn, jnt_fn) in enumerate(
+            zip(sorted(img_fns), sorted(jnt_fns))):
+        img_datum = get_img_datum(img_fn)
+        jnt_datum = get_jnt_datum(jnt_fn)
+        key = '%010d' % keys[i]
+        if i >= 20000:
+            img_txn.put(key, img_datum.SerializeToString())
+            jnt_txn.put(key, jnt_datum.SerializeToString())
+        else:
+            img_val_txn.put(key, img_datum.SerializeToString())
+            jnt_val_txn.put(key, jnt_datum.SerializeToString())
+
+        if i % 10000 == 0:
+            img_txn.commit()
+            jnt_txn.commit()
+            jnt_txn = jnt_env.begin(write=True, buffers=True)
+            img_txn = img_env.begin(write=True, buffers=True)
+            img_val_txn.commit()
+            jnt_val_txn.commit()
+            jnt_val_txn = jnt_val_env.begin(write=True, buffers=True)
+            img_val_txn = img_val_env.begin(write=True, buffers=True)
+
+        print i, os.path.basename(img_fn), os.path.basename(jnt_fn)
+
+    img_txn.commit()
+    jnt_txn.commit()
+    img_val_txn.commit()
+    jnt_val_txn.commit()
+    img_env.close()
+    jnt_env.close()
+    img_val_env.close()
+    jnt_val_env.close()
 
 def read_test():
     img_db_fn = 'data/image_train.lmdb'
@@ -130,5 +193,6 @@ def read_test():
     jnt_env.close()
 
 if __name__ == '__main__':
-    # read_test()
-    create_dataset()
+    read_test()
+    create_test_dataset()
+
